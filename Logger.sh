@@ -10,11 +10,31 @@
 #    e não se comporta direito rodando em zsh.
 if [ -n "$ZSH_VERSION" ]; then
     _THIS_SCRIPT="${(%):-%x}"
-    echo -e "\033[1;33m⚠\033[0m Detectado zsh — trocando para bash nesta sessão..."
-    if [ -f "$HOME/.bashrc" ]; then
-        exec bash --rcfile <(cat "$HOME/.bashrc"; echo "source '${_THIS_SCRIPT}'") -i
+
+    if [ -f "$_THIS_SCRIPT" ]; then
+        # Caminho normal: o script está salvo em um arquivo de verdade,
+        # então dá pra reabri-lo quantas vezes for preciso sem risco.
+        echo -e "\033[1;33m⚠\033[0m Detectado zsh — trocando para bash nesta sessão..."
+        if [ -f "$HOME/.bashrc" ]; then
+            exec bash --rcfile <(cat "$HOME/.bashrc"; echo "source '${_THIS_SCRIPT}'") -i
+        else
+            exec bash --rcfile <(echo "source '${_THIS_SCRIPT}'") -i
+        fi
     else
-        exec bash --rcfile <(echo "source '${_THIS_SCRIPT}'") -i
+        # Caso "source <(curl ...)": o "arquivo" é na verdade um pipe de
+        # leitura única (ex: /proc/self/fd/17), que o zsh já começou a
+        # consumir pra chegar até aqui. Reabrir e re-executar esse mesmo
+        # descritor dentro do bash não é confiável — ou não sobra nada
+        # nele, ou o bash acaba lendo um pedaço do meio do script fora
+        # de contexto (é exatamente esse tipo de erro que aparece:
+        # "local: can only be used in a function", syntax error etc).
+        # Por segurança, aborta em vez de tentar uma troca que pode falhar
+        # de forma imprevisível, e orienta a chamar direto com bash.
+        echo -e "\033[1;31m✗\033[0m Você está em zsh e rodou isso via pipe (ex: source <(curl ...))."
+        echo -e "   Trocar de shell automaticamente nesse caso não é seguro (o pipe já foi parcialmente consumido)."
+        echo -e "   Rode assim em vez disso:\n"
+        echo -e "   \033[1;37mbash <(curl -fsSL <url-do-script>)\033[0m\n"
+        return 1 2>/dev/null || exit 1
     fi
 fi
 
@@ -32,6 +52,20 @@ STARTUP_COMMANDS=(
     "ls -lhArt"
     "df -h"
     # '_run_github_script "https://raw.githubusercontent.com/usuario/repo/main/script.sh"'
+)
+
+# ---------------------------------------------------------
+# EDITE AQUI: atalhos pra rodar seus scripts. A chave é o que você vai
+# digitar no terminal, o valor é o comando disparado. Já vem pronto
+# pra baixar e rodar um script hospedado no GitHub via _run_github_script.
+#
+# Atenção: "shift" também é um comando interno do bash (usado dentro
+# de scripts/funções pra deslocar parâmetros posicionais). Como alias
+# interativo funciona normalmente, mas evite usar esse nome dentro de
+# funções que você mesmo escrever neste arquivo.
+# ---------------------------------------------------------
+declare -A CUSTOM_ALIASES=(
+    [shift]='_run_github_script "https://raw.githubusercontent.com/C1sc066/ferramenta_de_automacao/refs/heads/main/LimpezaBinarioAlo"'
 )
 
 # Evita reinicialização caso o script seja sourced mais de uma vez
@@ -139,8 +173,17 @@ _run_github_script() {
     fi
 }
 
-# 7. Executa a lista STARTUP_COMMANDS definida lá no topo do arquivo.
-#    Roda depois do exec/tee (passo 8), então essa saída também fica
+# 7. Registra os atalhos definidos em CUSTOM_ALIASES lá no topo do arquivo.
+_register_aliases() {
+    local name
+    for name in "${!CUSTOM_ALIASES[@]}"; do
+        alias "$name"="${CUSTOM_ALIASES[$name]}"
+    done
+}
+_register_aliases
+
+# 8. Executa a lista STARTUP_COMMANDS definida lá no topo do arquivo.
+#    Roda depois do exec/tee (passo 9), então essa saída também fica
 #    registrada no log da sessão.
 _run_startup_commands() {
     local cmd
@@ -151,18 +194,18 @@ _run_startup_commands() {
     done
 }
 
-# 8. Duplica a saída (stdout + stderr): a tela continua colorida e em
+# 9. Duplica a saída (stdout + stderr): a tela continua colorida e em
 #    tempo real; o log recebe uma cópia limpa (sem ANSI).
 exec > >(tee /dev/tty | _clean_ansi >> "$BASH_LOG_FILE") 2>&1
 
-# 9. Marca o encerramento da sessão no log
+# 10. Marca o encerramento da sessão no log
 _log_session_end() {
     echo "" >> "$BASH_LOG_FILE"
     echo "=== $(date '+%Y-%m-%d %H:%M:%S') - Sessão encerrada ===" >> "$BASH_LOG_FILE"
 }
 trap _log_session_end EXIT
 
-# 10. Encadeia com PROMPT_COMMAND existente, sem duplicar em re-source
+# 11. Encadeia com PROMPT_COMMAND existente, sem duplicar em re-source
 case ";${PROMPT_COMMAND};" in
     *";_prompt_command;"*) ;;
     *) export PROMPT_COMMAND="_prompt_command; ${PROMPT_COMMAND:-:}" ;;
