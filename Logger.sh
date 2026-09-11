@@ -64,7 +64,7 @@ STARTUP_COMMANDS=(
 # ---------------------------------------------------------
 declare -A CUSTOM_ALIASES=(
     [shift]='_run_github_script "https://raw.githubusercontent.com/C1sc066/ferramenta_de_automacao/refs/heads/main/LimpezaBinarioAlocacaoEspaco.sh"'
-    [dash]='_run_github_script "https://raw.githubusercontent.com/C1sc066/LoggerLinux/refs/heads/main/dash.sh"'
+    [dashboard]='_run_github_script "https://raw.githubusercontent.com/C1sc066/LoggerLinux/refs/heads/main/dash.sh"'
 )
 
 # Evita reinicialização caso o script seja sourced mais de uma vez
