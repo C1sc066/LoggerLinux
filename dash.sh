@@ -7,7 +7,9 @@
 # ==============================================================================
 
 # Cores e Estilos ANSI (Degradê Suave de 6 Estágios)
-if [ -t 1 ]; then
+# Cores e Estilos ANSI (Compatível com curl ... | bash)
+# Se stdout for terminal OU se $TERM estiver definido e não for "dumb", ativa cores
+if [ -t 1 ] || [ -n "$TERM" ] && [ "$TERM" != "dumb" ]; then
     CLR_RESET="\033[0m"
     CLR_BOLD="\033[1m"
     CLR_DIM="\033[2m"
