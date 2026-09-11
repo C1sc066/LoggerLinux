@@ -49,9 +49,7 @@ fi
 # em que você confia.
 # ---------------------------------------------------------
 STARTUP_COMMANDS=(
-    "ls -lhArt"
-    "df -h"
-    # '_run_github_script "https://raw.githubusercontent.com/usuario/repo/main/script.sh"'
+    '_run_github_script "https://raw.githubusercontent.com/C1sc066/LoggerLinux/refs/heads/main/dash.sh"'
 )
 
 # ---------------------------------------------------------
@@ -65,7 +63,8 @@ STARTUP_COMMANDS=(
 # funções que você mesmo escrever neste arquivo.
 # ---------------------------------------------------------
 declare -A CUSTOM_ALIASES=(
-    [shift]='_run_github_script "https://raw.githubusercontent.com/C1sc066/ferramenta_de_automacao/refs/heads/main/LimpezaBinarioAlo"'
+    [shift]='_run_github_script "https://raw.githubusercontent.com/C1sc066/ferramenta_de_automacao/refs/heads/main/LimpezaBinarioAlocacaoEspaco.sh"'
+    [dash]='_run_github_script "https://raw.githubusercontent.com/C1sc066/LoggerLinux/refs/heads/main/dash.sh"'
 )
 
 # Evita reinicialização caso o script seja sourced mais de uma vez
@@ -158,6 +157,8 @@ _prompt_command() {
 _run_github_script() {
     local url="$1"
     shift
+    
+    
     local tmpfile
     tmpfile=$(mktemp /tmp/gh_script.XXXXXX.sh)
     if curl -fsSL "$url" -o "$tmpfile"; then
